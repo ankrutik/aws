@@ -66,9 +66,14 @@ Object based storage. File size can be 0 bytes to 5 TB. Unlimited storage. Block
 ## Bucket
 
 - like a folder
-- needs to be universally unique or unique gobally
+- needs to be universally unique or unique gobally; universal namespace
 - URL or web address created for it
 - HTTP 200 code received if upload is successful
+- by default newly created bucket is private
+  - Access can be setup using:
+    - bucket policies (**bucket level**)
+    - Access Control Lists (**object level**)
+- Access logs can be configured to be stored on another bucket in same or different account
 
 ## Object
 
@@ -128,4 +133,112 @@ Storage; requests; storage management pricing; data transfer pricing;
 transfer acceleration: transfer to edge location first then send to S3 bucket via Amazon's backbone network;
 
 cross region replication pricing: replicating buckets across regions for HA or disaster recovery
+
+## lab : Options when creating bucket
+
+name is unique; select region; can clone
+
+versioning maintained on same bucket; access logs; key-value pair tags; object level logging; encryption; cloudwatch metrics
+
+blocking public access
+
+Access to buckets can be setup via:
+
+- bucket policies  (**bucket level**)
+- ACLs (**object level**)
+
+## Uploading files
+
+Uploading files gives URL but URL cannot be used till object is made public
+
+- bucket needs to be made public
+- object needs to be made public
+
+Storage class can be specified at object level
+
+## Pricing Tiers
+
+***exam: which tier to use for a scenarios; which is cheaper than the other***
+
+### what are you charged for?
+
+storage; requests and data retrievals; data transfer; management and replication
+
+### comparisons notes
+
+gets cheaper in order of: 
+S3; S3 IA; S3 IT; S3 One Zone IA; S3 Glacier; Glacier deep archive
+
+One Zone IA risks loss of data or unavailability if that one zone goes down.
+
+#### S3 standard and intelligent tiering
+
+same but intelligent tiering gives 
+
+- access to infrequently accessed (IA) which makes IA objects cheaper to store
+- management fee per 100 objects
+
+Better to use Intelligent Tiering than S3 standard unless you have thousands/millions of objects.
+
+## Encryption
+
+### Encryption in transit
+
+transfer from server to client is encrypted
+
+achieved via SSL/TLS
+
+### Encryption at rest
+
+encrypted when stored; done per object; 2 forms
+
+#### Server side
+
+Amazon helps with encryption
+
+Services
+
+- S3 managed keys using AES-256 (SSE-S3)
+- AWS Key Mgmt Service (SSE-KMS)
+- with customer provided keys (SSE-C)
+
+##### lab :
+
+*click on object* > Encryption > *options to use SSE-S3 or SSE-KMS*
+
+#### Client side
+
+client encrypts files before uploading
+
+## Versioning
+
+stores all versions to restore even if deleted; stores object versions with permissions
+
+used for backup;
+
+once enabled cannot be disabled, only suspended;
+
+lifecycle rules;
+
+delete via MFA
+
+### lab :
+
+*select bucket* > Properties > Versioning > *enable or suspend*
+
+
+
+Upload a file to this bucket; make object public; it can be accessed via URL.
+
+Upload file with same name and extension to the bucket; the object is replaced; **but new version of object is no longer public**; need to make it public again to be accesible via URL; **older version will still be public**
+
+
+
+In Bucket view, toggle Versions. You can see different versions of the same object with different version ids. 
+
+Note that the size used by that bucket is now cumulative size of both versions of the same file. **Versioning will use up full size of each revision unlike git where only difference is saved.**
+
+
+
+Delete file; the bucket looks empty; toggle on version and you **can see the object and its versions but with a delete marker**
 
