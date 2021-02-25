@@ -212,7 +212,9 @@ client encrypts files before uploading
 
 ## Versioning
 
-stores all versions to restore even if deleted; stores object versions with permissions
+stores all versions to restore even if deleted; 
+
+each object version maintained with permissions, storage tiers;
 
 used for backup;
 
@@ -220,7 +222,7 @@ once enabled cannot be disabled, only suspended;
 
 lifecycle rules;
 
-delete via MFA
+delete via MFA;
 
 ### lab :
 
@@ -229,6 +231,8 @@ delete via MFA
 
 
 Upload a file to this bucket; make object public; it can be accessed via URL.
+
+URL will be with `versionId` query param. Example, `https://<bucket_url>/fileName.txt?versionId=abcversionid123`
 
 Upload file with same name and extension to the bucket; the object is replaced; **but new version of object is no longer public**; need to make it public again to be accesible via URL; **older version will still be public**
 
@@ -241,4 +245,8 @@ Note that the size used by that bucket is now cumulative size of both versions o
 
 
 Delete file; the bucket looks empty; toggle on version and you **can see the object and its versions but with a delete marker**
+
+## lab : Lifecycle and Glacier
+
+*bucket view* > Management > Lifecycle
 
