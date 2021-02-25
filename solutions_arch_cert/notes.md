@@ -250,3 +250,87 @@ Delete file; the bucket looks empty; toggle on version and you **can see the obj
 
 *bucket view* > Management > Lifecycle
 
+rule name: name of the rule 
+
+rule scope: filter the objects that this rule applies to or all objects
+
+lifecycle rule actions: what to do to what version of object at what interval; transition between states, delete, etc.
+
+Timeline summary is displayed as describing what happens to applicable objects as time passes.
+
+- Automates moving your objects between different storage classes.
+- can be used in conjuction ith versioning.
+- can be applied to current and previous versions.
+
+## Object lock and Glacier Vault Lock
+
+Uses WORM (write once, read many) model where you can lock modification/deletion of the object for finite time or indefinitely.
+
+Locks can be applied on individual objects or entire buckets.
+
+### Modes
+
+- governance: users with right/permissions can modify object
+- compliance: object can't be modified for the retention period by even the root user; retention period cannot be shortened
+
+**Retention period** is applied by storing a timestamp on the object's metadata.
+
+**Legal holds** do not require retention period and object is blocked from modification till legal hold exists. It can be applied by users with legal hold permission.
+
+Vault lock policies can be applied on Glacier vaults which once applied cannot be changed.
+
+## S3 Performance
+
+**Prefix** is path between bucket name and object name.
+
+S3 has extremely low latency.
+
+3500 requests PUT/COPY/POST/DELETE per second per prefix
+
+5500 requests GET/HEAD per second per prefix
+
+**If you spread out your object in separate prefixes, you can get that much high read rate.**
+
+If you use **SSE-KMS**, then 
+
+- read will need decrypt and writes will need encrypt. 
+- This puts a limit on the objects that use SSE-KMS which is the KMS quota. 
+- This KMS quota depends on regions and cannot be increased.
+
+**Multipart uploads** parallelize uploads:
+
+- recommended for files > 100MB
+- required for files > 5GB
+- application will have to handle splitting of the file before multipart uploads
+
+**Byte range fetches** are download equivalents of above:
+
+- parallelize downloads
+- failure is only for that byte range
+- used to download partial amount of the file
+
+## S3 and Glacier Select
+
+**S3 Select**: Achieve drastic performance increase by using simple SQL expressions to fetch subset of data from object. Save money on data transfer.
+
+**Glacier Select**: Same as above but on Glacier. Used for customer that need storage compliance.
+
+## AWS Organizations and Consolidated Billing
+
+Multiple AWS accounts can be consolidated into an **AWS organization**. Access to services can be given to orgs which will trickle down to accounts.
+
+**Consolidated billing** allows easy tracking of charges, allocating costs. Volume pricing discount applicable.
+
+Go to Services > AWS Organizations
+create organizations; add accounts by sending invites;
+
+**Root account**: always enable multi factor authentication; strong, complex passwords
+
+**Paying account**: use for billing only; no resources deployed here
+
+**Service Control Policies** (SCP) can be used to control access to services on OU or individual accounts. 
+
+
+
+
+
