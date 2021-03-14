@@ -1015,3 +1015,161 @@ CloudWatch and CloudTrail
 
 VPC endpoints
 
+## Redshift
+
+petabyte scale data warehouse service
+
+single node config (160Gb)
+
+multi-node config:
+
+- leader node: manage client requests
+- compute nodes: store data and perform queries and computations
+
+Individual columns are compressed
+
+Massively parralel processing
+
+backups:
+
+- enabled by default
+- maximum retention of 35 days
+- maintains at least 3 copies of data
+- async replicate your snapshots to S3 in another region
+
+Pricing:
+
+- compute node hours: 1 unit per node per hour; leader node is not charged
+- backup
+- data transfer
+
+Security
+
+- ssl
+- aes-256 encryption
+- KMS
+
+Only available in 1 AZ currently
+
+## Aurora
+
+MySQL and PostgreSQL compatible RDS engine
+
+Starts at 10GB, scales in 10GB increaments, upto 64TB
+
+compute resources upto 32vCPUs and 244GB RAM
+
+2 copies of data in each AZ, minimum 3 AZs
+
+share snapshots with other AWS accounts
+
+types of aurora replicas:
+
+- aurora replicas (15)
+- MySQL read replicas (5)
+- PostgreSQL (1)
+
+autmated backups on by default
+
+serverless
+
+suited for infrequent, intermittent, or unpredictable workloads
+
+## Elasticache
+
+web service to deploy, operate, and scal in-memory cache in the cloud
+
+supports memcached and redis
+
+memcached: simple, multithreaded performance
+
+redis: advanced data type, sorting
+
+redis is multi AZ and allows back/restores
+
+## Database Migration Service
+
+homogenous (eg Oracle to Oracle) or heterogenous (eg. Oracle to Aurora) migration
+
+Heterogenous needs Schema Conversion Tool
+
+## Caching strategies
+
+Services that have caching capabilites:
+
+- CloudFront
+- API Gateway
+- Elasticache
+- DynamoDB Accelarator
+
+Add caching more towards the front to decrease latency.
+
+## Elastic Map Reduce
+
+Big Data scenarios
+
+Cluster components:
+
+- Master node: manage and track status of tasks; monitor health of cluster; at least one in each cluster
+- core node: runs tasks and stores data on Hadoop Distributed File System
+- task node: only runs tasks and does not store data; optional
+
+Master node stored log data. 
+
+replication can be configured to replicate log data every 5 mintues on S3; can on;ly be set up during initial creation
+
+# Advanced IAM
+
+## AWS Directory Service
+
+AWS Managed Microsoft AD
+
+Simple AD
+
+AD Connector
+
+Cloud Directory
+
+Cognito user pools
+
+AD compatible:
+
+-  microsoft AD
+- ad connector
+- simple ad
+
+Not AD compatible:
+
+- cloud directory
+- cognito user pools
+
+AD Trust is used to extend AWS AD onto your on-prem.
+
+## IAM policies
+
+AWS policies are policies created by AWS for convienences. Not editable.
+
+Customer managed policies are used for customizations.
+
+If not explicitly allowed, it is implicitly denied
+
+Policies only work when applied to a group or role.
+
+AWS joins all applicable policies
+
+Permission boundaries
+
+- used to delegate administration to other users
+- prevent privilege escalation or unnecessarily broad permissions
+- control maximum permissions that a IAM policy can apply
+
+## Resource Access Manager
+
+resource sharing between accounts
+
+only somre services can be shared
+
+## AWS Single Sign-On
+
+centrally manage access to AWS accoutns and business applications
+
