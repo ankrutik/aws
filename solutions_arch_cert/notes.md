@@ -799,3 +799,219 @@ aws s3 mb s3://<domain>
 aws s3 cp index.html s3://<domain>
 ```
 
+## EC2 Instance Metadata
+
+ ```bash
+curl http://<169.254.169.254>/latest/meta-data
+curl http://<169.254.169.254>/latest/user-data
+ ```
+
+## lab: Elastic File System
+
+Supports NFSv4
+
+Multiple EC2 instances cannot share an EBS volume but can share a EFS volume.
+
+Grows and reduces automatically, no preprovision of space needed. Pay for only what you use.
+
+Supports thousands of concurrent NFS connections.
+
+Data stored across multiple AZs within a region.
+
+Read after write cosistency.
+
+## FSX for Windows and FSX for Lustre
+
+FSX for Windows: Windows file server designed for Windows based applications. SMB based.
+
+FSX for Lustre: for HPC and ML applications. Can stored data directly on S3.
+
+## EC2 Placement Groups
+
+**Cluster Placement group** is grouping of instances within a single AZ. Applications that need low latency, high n/w thruput.
+
+**Spread Placement Group** are group of instances each placed on distinct underlying hardware. Used when you have small number of critical instances that should be kept separate from each other.
+
+**Partitioned Placement groups** divides each group into logical segment partitions such that each partition that its own rack (each rack has own network and power source). Used for HDFS, HBase, Cassandra.
+
+## HPC on AWS
+
+### Data Store
+
+Snowball, AWS Data Sync, Direct connect
+
+AWS Direct Connect is a dedicated line between from your premises to AWS rather than using Internet.
+
+### Compute
+
+EC2 instances that are GPU or CPU optimised; EC2 fleets; Cluster Placement groups; ENA; ENI; EFA
+
+### Orchestration and Automation
+
+AWS batch; AWS ParallelCluster
+
+## AWS WAF
+
+Web application firewall to monitor HTTP and HTTPS requests that are forwarded to CloudFront, Application Load balance or API gateway.
+
+Control access to content.
+
+Firewall on what IP addresses should be allowed or what query parameters should be passed.
+
+Whitelist, Blacklist, counter.
+
+Block access to geography, malicious IPs.
+
+# Databases on AWS
+
+On AWS
+
+- Microsoft SQL Server
+- Oracle
+- MySQL Server
+- PostgreSQL
+- Amazon Aurora 
+- MariaDB
+
+Multi-AZ for disaster recevery
+
+Read replicas for performance
+
+DynamoDB (Amazon's no SQL solution)
+
+Red Shift OLAP (Amazon's data warehousing solution)
+
+Elasticache: MemcacheD, Redis; to speed up existing databases using caching
+
+## Lab: create RDS instance
+
+Configure your DB security group to talk with application security group when creating the RDS instance
+
+RDS runs onn virtual machine, can't ssh into that
+
+Not serverless
+
+## Back Ups, Multi-AZ, and read replicas
+
+Backup needs to be enabled for read replicas.
+
+2 types of backup:
+
+- automated backups
+- database snapshots
+
+Read replicas on read replicas are possible. Too many can bring latency.
+
+- can be multi-AZ
+- increase performance
+- can be in different region
+- MySQL, PostgreSQL, MariaDB, Oracle, Aurora
+- can be promoted to master, this will break the read replica
+
+MultiAZ:
+
+- used for Disaster recovery
+- force failover from one AZ to another by rebooting RDS instance
+
+Encryption available for all 6 DB types. Uses KMS. Automated backup, read replicas, snapshots are encrypted too.
+
+## DynamoDB
+
+single-digit millisecond latency
+
+supports both documents and key-value data models
+
+uses SSDs
+
+spread across 3 distinct geographic locations
+
+eventually consistent reads: consistency across all copies reached within 1 second; default
+
+strongly consistent reads: returns result that reflects all writes that received successful response prior to read; sub 1 second
+
+## Advanced DynamoDB
+
+### DynamoDb Accelarator (DAX)
+
+in-mem cache; 10x performance; microseconds response; no need for devs to manage separate caching logic
+
+### Transactions
+
+Multiple "all or nothing" operations like in financial transactions or fulfilling orders
+
+2 underlying reads/writes: prepare and commit
+
+upto 25 items or 4MB of data
+
+### On-Demand Capacity
+
+pay-per-request pricing
+
+balance cost and performance
+
+no minimum capacity
+
+**use for new product launches, then observe and switch to provisioned according to waht you learned with on-demand**
+
+### On-Demand backup and Restore
+
+Full backups at any time
+
+0 impact on table performance and availability
+
+consistent within seconds, retained until deleted
+
+same region as source table
+
+### Point in time Recovery
+
+protects against accidental writes or deletes
+
+restore to any point in the last 35 days to 5 minutes 
+
+incremental backups
+
+not enabled by deafult
+
+### Streams
+
+time-ordered **sequence** of item-level **changes** in a table
+
+inserts, updated, deletes
+
+stored for 24 hours
+
+stream records grouped into shards
+
+combine with lambda functions for functionality like stored procedures
+
+### Global Tables
+
+globally distributed appls
+
+multi region redundancy for DR or HA
+
+no application rewrites
+
+replication latency under 1 second
+
+needs streams enabled
+
+### Database migration service (DMS)
+
+Source and destination DBs can be on prem or on AWS (EC2 or RDS)
+
+### Security
+
+KMS used for encryption
+
+site-to-site VPN, Direct Connect
+
+IAM policies and Roles
+
+Fine-grained access
+
+CloudWatch and CloudTrail
+
+VPC endpoints
+
