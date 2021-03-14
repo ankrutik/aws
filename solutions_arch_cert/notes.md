@@ -74,6 +74,7 @@ Object based storage. File size can be 0 bytes to 5 TB. Unlimited storage. Block
     - bucket policies (**bucket level**)
     - Access Control Lists (**object level**)
 - Access logs can be configured to be stored on another bucket in same or different account
+- 100 buckets allowed per account
 
 ## Object
 
@@ -95,6 +96,14 @@ read after write for PUTs
 ## Guarantees
 
 99.99% availability; 99.999..9% (11 x9) durability; Tiered storage; lifecycle management; versioning; encryption; multi factored auth for deletion; access control lists
+
+## Path Styles
+
+- Virtual style puts your bucket name 1st, s3 2nd, and the region 3rd.   
+- Path style puts s3 1st and your bucket as a sub domain. 
+- Legacy Global endpoint has no region.  
+- S3 static hosting can be your own domain or your bucket name 1st, s3-website 2nd, followed by the region. 
+- AWS are in the process of phasing out Path style, and support for Legacy Global  Endpoint format is limited and discouraged.  
 
 ## Storage classes
 
@@ -505,5 +514,288 @@ Tape gateway: store tapes in virtual tapes and move to cloud; archive data; VTL 
 - gives dashboards, alerts, reports
 - PCI-DSS compliance; prevent ID theft
 
+# EC2
 
+- resizable compute capability in the cloud
+- upscale and downscale capability as needed
+- Amazon Elastic Compute Cloud
+
+
+
+### Models
+
+#### On demand
+
+fixed rate by the hour/second; trying things out; no long term commitments
+
+#### Reserved
+
+capacity reservation; significant discount on hourly charge; 1 or 3 years terms
+
+Standard: 75% off
+
+Convertible: 54%; change instance type
+
+Scheduled: time window when capacity will be used
+
+#### Spot
+
+bid whatever prices you want for instance capacity
+
+when the price goes above your bid, the applications are taken down. If EC2 takes the application down, you will not be charged for that partial hour used. But if you take it down, you will be charged an hour.
+
+usefully for when applications are flexible and feasible only at very low costs
+
+#### Dedicated hosts
+
+physical EC2 servers dedicated for your use
+
+no multiple tenancy
+
+existing software licenses that restrict deployment on limited number of servers
+
+### Instance Types
+
+Multiple EC2 Instance types as per your needs. For example, T3 is lower cost and general purpose for web servers and small DBs; M5 is for general purpose Application servers.
+
+## lab: Setting up EC2
+
+#### Storage
+Root volume will be SSD and magnetic. Subsequent volumes can be of more types.
+IPOS: input output per second can be configurable
+Delete on terminate or not, EBS is delete by default
+Encrypt or not
+
+#### Termination
+
+Configure what happens when you terminate: stop or terminate
+Termination Protection (default off) doesn't allow the usual terminate button to work. Will have to disable termination protection to actually terminate.
+
+#### Other
+
+
+Tags
+Security Groups: what protocol at what port and what IP
+Key pair is created
+Console can be access via a console which opens in the browser, EC2 Instance Connect
+
+
+
+Connecting via console: 
+
+```
+ssh ec2-username@IPADDRESS_EC2 -i PrivateKey.pem
+```
+
+
+
+## Security Groups
+
+All inbound traffic is blocked by default, all outbound is allowed.
+
+Define which type of connection (eg. HTTP, SSH, etc) , which protocol (eg. TCP), which port (eg. 80, 22) is allowed inbound and outbound on the instance.
+
+**If inbound is created for a port, the outbound is created automatically. Stateful.**
+
+No way to blacklist. Only whitelist.
+
+Multiple security groups can be applied to same instance.
+
+## EBS 101 
+
+Elastic Block Storage is a harddisk on the cloud.
+
+### General Purpose (SSD)
+
+Most workloads; gp2 API; <=16K IOPS
+
+### Provisional IOPS (SSD)
+
+Databases; io1 API; <=64K IOPS
+
+### Throughput optimised HDD
+
+Big data, warehouses; st1 API; <=500 IOPS
+
+### Cold HDD
+
+File servers; sc1 API; <=250 IOPS
+
+### Magnetic
+
+infrequently accessed data; Standard API; 40-200 IOPS
+
+## lab: EBS Volumes
+
+Volume will be in the same AZ as the EC2 instance.
+
+Volume sizes can be changed, but will take time to reflect. May need to repartition the drive to detect the added size.
+
+Hardware assisted virtualization
+
+Snapshots are point in time copies of Volumes. Incremental nature i.e. only changes are stored on S3. First snapshot takes time to create.
+
+**Migrating EBS overview**: Volumes to snapshots to AMI (Amazon Machine Image) then copy AMI to destination region then launch on another AZ
+
+For root device (device with OS) snapshots, best pratice to stop the instance before taking snapshot.
+
+## AMI types
+
+### Selection criteria
+
+- region
+
+- OS
+
+- arch (32/64-bit)
+
+- lauch permission
+
+- storage for root device
+
+  - Types and criteria
+
+    | criteria                                                     | instance store (ephemeral) | EBS Backed  |
+    | ------------------------------------------------------------ | -------------------------- | ----------- |
+    | what happens to data after restart due to host failure?      | deleted                    | not deleted |
+    | can it be stopped?                                           | no                         | yes         |
+    | can be configured to not delete after termination on instance? | no                         | yes         |
+    | can be rebooted?                                             | yes                        | yes         |
+
+
+
+## ENI vs ENA vs EFA
+
+
+
+| criteria | ENI                                             | ENA                                                          | EFA                                                          |
+| -------- | ----------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| meaning  | Elastic network Interface                       | Enhanced networking via Elastic Network Adaptor (100 Gbps) or Virtual Function (10 Gbps) | Elastic Fabric Adaptor                                       |
+| use case | basic networking; low budget; multiple networks | reliable, high throughput                                    | high-performance computing, ML applications, OS by pass (linux only) |
+
+## lab: Encrypted root device volumes and snapshots
+
+When creating root volumes, you have the new option to configure encryption at creation time.
+
+For existing volumes without encryption > create snapshot > create copy > during creation mention that it needs to be encrypted > create AMI > use AMI to launch instance
+
+Cannot take an encrypted snapshot and launch as unencrypted
+
+Snapshots can be shared only when unencrypted.
+
+## Spot Instances and Spot Fleets
+
+AWS has unused capacity. This capacity can be bid on. If your price matches below your maximum bid, the capacity is provisioned for your use. When the spot prices goes above your bid, your application is brought down.
+
+Used when you need flexible, fault tolerant applications that can be brought down in 2 minutes notice and resume when brought up again -applications that need not be online all the time.
+
+Can save upto 90% cost of On-Demand instances.
+
+Spot blocks can be used to stop termination for 1 to 6 hours if spot price goes above your bid.
+
+### Spot request
+
+Contains
+
+- maximum price
+- desired number of instances
+- launch specs
+- request type (application went down due to spot price increase, what to do next time that spot price goes below bid?) :
+  - one time: do nothing
+  - persistent: bring application up again
+- valid from and until
+
+### Spot Fleets
+
+Collection of spot instances and on demand instances
+
+Will try to maintain target capacity within budget
+
+## EC2 Hibernate
+
+**What happens when EC2 instance starts**: OS boots up, User data scripts are run, application starts
+
+**What happens on Hibernation**: saves contents of instance RAM into EBS root volume; persists root and data volumes; on restart RAM contents are reloaded, processes are resumed, OS need not restart; **instance ID is retained**;
+
+Use cases for hibernate: long running processes; applications that take time to initialise 
+
+RAM must be <150GB
+
+Hibernation time cannot exceed 60 days
+
+Available for on-demand and reserved instances
+
+## CloudWatch
+
+Monitoring performance of:
+
+- Compute:
+  - EC2 instances
+  - autoscaling groups
+  - Elsactic load balances
+  - route53
+- Storage
+  - EBS
+  - Storeage gateways
+  - CloudFront
+
+EC2 is 5 minutes by default, configurable to 1 minute intervals.
+
+CloudWatch alarms can be created to trigger notifications.
+
+Events help to respond to state changes.
+
+Logs help wit aggregate, monitor, and store logs.
+
+Host level metrics like CPU, Network, Disk, status check
+
+### CloudTrail (Auditing)
+
+User and resource activity monitored by recording AWS management console actions and API calls. Unrelated to CloudWatch.
+
+## lab: CloudWatch
+
+Dashboards, Alarms
+
+## lab: AWS Command Line
+
+Needs programmatic access in IAM
+
+ssh to EC2 instance then use the aws command
+
+```
+> aws configure
+-- to configure keys
+
+> aws s3 ls
+-- <aws command> <service> <command>
+```
+
+`.aws` folder contains credentials file. Best practice not to use configure and store in credentials file. See *IAM Roles*.
+
+## lab: IAM Roles
+
+Roles are more secure than stpring access keys and secret access keys on individual EC2 instances
+
+Roles are easier to manage
+
+Roles can be assigned to EC2 instance using both command line and console
+
+Roles are universal.
+
+## lab: Using Boot Strap Scripts
+
+Configure instance details > Advanced Details > user data
+
+```bash
+#!/bin/bash
+yum update -y
+yum install httpd -y
+service httpd start
+chkconfig httpd on
+cd /var/www/html
+echo "Jai mata di" > index.html
+aws s3 mb s3://<domain>
+aws s3 cp index.html s3://<domain>
+```
 
