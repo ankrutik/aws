@@ -330,7 +330,180 @@ create organizations; add accounts by sending invites;
 
 **Service Control Policies** (SCP) can be used to control access to services on OU or individual accounts. 
 
+## lab: Sharing S3 between accounts
 
+3 ways to share buckets between accounts:
+
+- Programmatic access
+  - Bucket policies and IAM (across entire bucket)
+  - ACLs and IAM (individual objects)
+- Programmatic and Console access
+  - Cross account IAM Roles 
+
+
+
+Create Role > grant permissions > give Role name > copy and save link 
+
+Log into other account > Accoutn drop down > Switch Role OR use link to open page that has Role information already filled in
+
+## lab: Cross Region Replication
+
+create a new bucket B > enable versioning
+
+go to original bucket A > go to needed version > Create Replication Rule > IAM role > select Source bucket A (limit scope or entire bucket)  > Destination bucket B
+
+Few configurations:
+
+- Storage class for replicated objects
+- Replication Time Control (replicate 99.99% objects in 15 minutes)
+- metrics and events
+- encrypt with KMS
+- replicate delete markers (deletion operations are replicated, lifecycle rules do not apply)
+
+Replication only starts working when Replication Rule is turned on. Existing files, if any, are not replicated.
+
+Permissions in source bucket and destination bucket are separate.
+
+Versioning should be enabled on both source and destination buckets.
+
+Deleting individual versions or delete markers are not replicated.
+
+## Tranfer Accelaration
+
+- Uses CloudFront Edge Network
+- Upload to Edge location (instead of directly to S3 bucket). Edge location transfers to S3 bucket.
+
+S3 Tranfer accelaration tool to test giving comparison of upload speeds when done via various Edge location against direct S3 upload.
+
+## AWS DataSync
+
+- move large amount of data from **on-prem to AWS**
+- NFS or SMB compatible
+- hourly, daily, weekly
+- DataSync agent needs to be installed
+- replicate EFS to another EFS
+
+## CloudFront
+
+- CDN (content delivery network)
+- distributed servers
+- deliver webpages and other web content
+- optimizes based on 
+  - geographic location of user
+  - origin of webpage
+  - content delivery server
+
+**Edge location**: where content is cache; separate to an AWS region
+
+**Origin**: S3 bucket, EC2 instance, Elastic load balancer, Route53
+
+**Distribution**: CDN which is a collection of edge locations
+
+User's request is routed to nearest edge location. Content is cached at edge location till time-to-live.
+
+Distribution types:
+
+- web distribution: websites
+- RTMP: media streaming
+
+Read and write(Transfer Accelaration) on edge locations.
+
+Cache can be cleared but you will be charged.
+
+## lab: create a CloudFront distribution
+
+Networking > CloudFront > create distribution > Web or RTMP
+
+origin domain name; path; origin id; TTL (min, max); signed URLs/cookies only(for users that have paid for content); WAF
+
+Can take 15 mins - 1h 
+
+Deleting a distribition will need disabling first
+
+Distributions come with their own domain name. Use that domain name to access your S3 content.
+
+Invalidations can be created to remove objects from the Edge caches.
+
+## Signed URLS and Cookies
+
+Used to secure content by giving access to only authorized users, commonly those that have paid for the content.
+
+When 1 file, use signed URL. When multiple files, use cookies.
+
+### Policy 
+
+contains:
+
+- URL expiration
+- IP ranges
+- Trusted signed (which aws accounts can crete signed urls)
+
+### Flow
+
+- Client authenticates with application
+- application returns signed URL to client
+- client uses signed URL to access content from CloudFront
+- Cloudfront uses OAI to fetch from S3
+
+### CloudFront signed URLs 
+
+- can have different origins, not just EC2 or S3
+- key-pair is account wide; managed by root user
+- caching
+- filter by date, path, IP, expiration, etc.
+
+### S3 signed URLs
+
+- issue request as IAM user who has presigned it; all permissions as that IAM user
+- limited lifetime
+
+*If user doesn't have direct access to S3, S3 signed URL cannot be used. Use CloudFront signed URLs instead.*
+
+## Snowball
+
+Physically transfer files to S3. Import or export.
+
+Snowball has 50 or 80 TB
+
+Snowball Edge has 100TB; gives compute capabilities as well
+
+Snowmobile has 100PB capacity
+
+Consider using these capabilities according to your network speeds to upload/download from S3.
+
+## Storage Gateway
+
+Used to connect on-premise software appliances to cloud storage.
+
+Can be a virtual machine image or a physical appliance.
+
+File gateway (NFS and SMB): store files to S3; allows all features of S3 onto the stored fies/objects; 
+
+Volume gateway (iSCSI): store images of harddisks on S3; incremental changes are stored for versioning; uses Amazon EBS snapshots
+
+- stored: store primary data locally; asynchronously back up to S3 in form of EBS
+
+- cached: S3 as primary data storage; retain frequently a cessed data locally in storage gateway
+
+Tape gateway: store tapes in virtual tapes and move to cloud; archive data; VTL interface
+
+## Athena vs Macie
+
+### Athena
+
+- interactive query service using which you can anlyse and query data on S3 using standard SQL
+- serverless; pay per query OR per TB scanned
+- no ETL setup
+- can be use on log files, business reports, AWS cost and usage reports, click-stream data
+
+### Macie
+
+- Personally Identifiable Information (PII) eg home address, email addres, SSN, phone number, etc
+- uses ML and NLP to discover, classify, protect PII
+- works on data on S3
+- analyze CloudTrail logs
+- gives dashboards, alerts, reports
+- PCI-DSS compliance; prevent ID theft
 
 
 
