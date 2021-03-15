@@ -666,8 +666,6 @@ For root device (device with OS) snapshots, best pratice to stop the instance be
 
 ## ENI vs ENA vs EFA
 
-
-
 | criteria | ENI                                             | ENA                                                          | EFA                                                          |
 | -------- | ----------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | meaning  | Elastic network Interface                       | Enhanced networking via Elastic Network Adaptor (100 Gbps) or Virtual Function (10 Gbps) | Elastic Fabric Adaptor                                       |
@@ -1167,7 +1165,7 @@ Permission boundaries
 
 resource sharing between accounts
 
-only somre services can be shared
+only some services can be shared
 
 ## AWS Single Sign-On
 
@@ -1374,6 +1372,172 @@ automatically assigned IP addresses
 no need to disable source and destination checks
 
 When you have one NAT Gateway being used by instances in multiple AZs, then failure of that NAT gateway's AZ will block others. Better to bring up multiple NAT gateways in multiple AZs.
+
+## Access Control Lists
+
+When a VPC is created, a Network ACL is created by default. 
+
+When you add a subnet to a VPC, it is added to the default NACL. Subnets should always be associated with a NACL.
+
+By default, a NACL denies everything inbound and outbound.
+
+A subnet can be associated with only one NACL at any given time. But a NACL can have multiple subnets associated with it.
+
+NACL > Edit Subnet associations:  to add or remove subnets from NACL
+
+The rule sequence matters since it checks the first passing rule, the rules are evaluated in ascending order of rule number starting with 100. Deny rules need to be before Allow rules.
+
+Ephemeral ports are a range of ports that are randomly allocated to incoming sessions to server. The port is then used for the lifetime of the communication session.
+
+NACLs are stateless i.e. inbound and outbound rules need to be defined separately, creation of inbound rule doesn't create corresponding outbound rule.
+
+Internet Gateway > Route Table > **NACL** > Security Group
+
+### Contrast with Security groups
+
+- NACLs act before Security Groups.
+- NACLs can have IP block lists
+- NACLs are at subnet level while Security Groups are at instance level
+
+## lab: Custom VPCs and ELBs
+
+When provisioning a Load Balancer, you need at least 2 public subnets.
+
+## lab: VPC Flow Logs 
+
+logs information on IP traffic going to and from your network interfaces
+
+logs data using Amazon CloudWatch
+
+VPC > Actions > Create Flow Log: accepted/rejected traffic, CloudWatch Logs/ S3 bucket (CloudWatch log group will need to be created); IAM role
+
+Peered VPC need to be in your account for flow logs on them.
+
+Tags on flow logs.
+
+Can't reconfigure flow logs after creation eg. changing IAM role
+
+IP traffic that is not monitored:
+
+- Amazon DNS. If using own DNS server, that will be logged
+- Amazon Windows license activation
+- 169.254.169.254 for instance metadata
+- DHCP traffic
+- to reserved IPS address for default VPC router
+
+### Levels
+
+- VPC
+- subnet
+- network interface
+
+## Bastions Hosts
+
+Special purpose computer specifically designed and configured to withstand attacks. Eg. hosts a single application like a Proxy server and all services are removed to the bare essentials to reduce threat to the computer. Can be outside the firewall or inside a DMZ and involves access from untrusted networks/computers.
+
+NAT Gateway/Instance is used to provide Internet traffic to EC2 instances in a private subnet.
+
+Bastion/Jumpbox is used to securely administer EC2 instances using SSH or RDP.
+
+NAT gateway cannot be used as a bastion host.
+
+Bastion hosts community AMIs are available.
+
+## Direct Connect
+
+Private connection between AWS and your DC/office/colocation environment. Helps reduce network costs, increase bandwidth, improve latency.
+
+### Setting up Direct Connect
+
+- create **public virtual interface** in DC console
+- VPC > VPN connections > create **customer gateway**
+- create **virtual private gateway**
+- attach virtual private gateway to desired VPC
+- VPC > VPN connections > create new **VPN connection**
+- select virtual private gateway and customer gateway
+- once VPN is available, setup VPN on customer gateway/firewall
+
+## Global Accelerator
+
+Directs traffic to the optimal endpoint in terms of proximity to client, health, endpoint weights
+
+Components:
+
+- static ip addresses: AWS brings 2 IPs or you can bring your own
+- accelerator
+- DNS name: assigns you a DNS name
+- network zone: isolated unit with own physical infrastructure
+- listener: port, TCP/UDP, client affinity
+- endpoint group: regions with **traffic dials**
+- endpoint: the EC2 instance or application load balancer or network load balance or Elastic IP address, **weights**
+
+Disable, wait for some time, delete
+
+## VPC endpoints
+
+privately connection your VPC to **only certain supported** AWS services and VPC endpoint services without without internet gateway, NAT, VPN, Direct Connect. 
+
+No public IP needed.
+
+Traffic doesn't leave amazon network.
+
+Instance in private subnet sends message to VPC endpoint gateway. The gateway then sends the message  to the AWS service.
+
+Endpoints are virtual devices.
+
+Types of endpoints:
+
+- interface
+- gateway: S3, DynamoDB
+
+## AWS PrivateLink
+
+Ways to connect to other VPC:
+
+- open up to Internet via Internet Gateway: problems with security, have to setup firewall, etc.
+- use VPC peering: will have to create that many star config connections and gets hard to manage for large number of peers
+
+Use PrivateLink instead:
+
+- network load balancer on service side
+- Elastic network interface (ENI) on customer side
+
+Take static IP of network load balancer and open it up on the ENI
+
+Useful to connect your VPC to 10s, 100s, 1000s of customer VPCs.
+
+No VPC peering, NAT, Internet gateways, route tables, etc.
+
+## AWS Transit Gateway
+
+Network topologies can get very complicated.
+
+Transit gateway is "**hub-spoke**" like topology to **simplify**.
+
+Transitive peering between 1000s of VPC and on-prem DCs.
+
+Cross regional
+
+Across multiple AWS accounts using Resource Access Manager.
+
+Use route tables to limit communication.
+
+Works with Direct Connect, VPN.
+
+Supports **IP multicast** (not supported by any other AWS service).
+
+## AWS VPN CloudHub
+
+If you have **multiple sites each with its own VPN**, you can use AWS VPN CloudHub to connect these sites.
+
+Hub-spoke model
+
+Operates over Internet, but customer gateway to AWS VPN CloudHub is encrypted (since it's a VPN).
+
+## AWS Network Costs
+
+- use private IP address over public IP address to save costs. this uses AWS backbone network.
+- to cut network costs, have all your EC2 instances in the same availability zone and use private IP address. 100% cost free but has **single point of failure issues**.
 
 
 
