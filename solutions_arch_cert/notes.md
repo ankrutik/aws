@@ -1173,3 +1173,207 @@ only somre services can be shared
 
 centrally manage access to AWS accoutns and business applications
 
+# Route53
+
+## DNS 101
+
+DNS is used to convert human readable domain names to IPv4 (32 bits) or IPv6 (128 bits) addresses.
+
+.com .edu .co.uk is top level domain name
+
+Elastic Load balancers do not have pre-defined IPv4 addresses, uyou resolve them using a DNS name
+
+**Top level domain names** controlled by Internet Assigned Numbers Authority (IANA)
+
+A **registrar** (Amazon, GoDaddy) assigns domain names under one of the top level domain names. Domains are registered with interNIC (service of ICANN) which enforees uniqueness of domain names across the Internet. Registered with a central database called WhoIS database.
+
+**SOA** (start of authority) records stores:
+
+- name of server that supplied data for zone
+- administrator of zone
+- current version of the data file
+- default TTL seconds
+
+**NS** (name server) records used by top level domain servers to direct traffic to the content dns server which contains authorative DNS records.
+
+User enters URL -> Browser goes to top level domain -> TLD returns NS record -> Browser looks up NS record to get SOA record -> SOA record contains DNS records
+
+- **"A" Record**: Address record; used to convert name of domain to an IP address
+- **TTL**
+- **CName** (canonical name): Used to resolve one domain to another; instead of using multiple IP address, use one IP and have 2 domain names on it. CNAME can't be used for naked domain name (`http://google.com`). It must be either an "A" record or alias.
+
+- **Alias** records are used to map resource records sets in your hosted zone to ELB, CloudFront distributions, or S3 buckets. Alias records are like CNAME records.
+- **PTR** records are used to look up domain names for IP addresses
+- **MX** records are used for mail
+
+## lab: Register a domain name
+
+domain registration can be bought from the AWS console for hosted zones (.com addressed for 20USD)
+
+can take upto 3 days
+
+_3 EC2 instances were brought up in different regions with different IP addresses and different index.html contents. One domain name was registered (hosted zone). Route 53 was used to configure the 3 different IP address to the same domain name (hosted zone) to try out the following routing policies. Hit the address, wait for DNS flush (TTL) or manually flush, hit again and see if it DNS resolve a different IP address._
+
+50 domain names can be managed using the AWS console but this limit can be increased by contacting AWS support.
+
+Records are created for each IP in Route 53 > Hosted zones.
+
+Health checks can be configured for each IP; can configure notifications.
+
+## Route53 Routing policies available on AWS
+
+### Simple
+
+one record with multiple IP adddresses
+
+for multiple values in record, Route 53 will return all values in random order
+
+### Weighted 
+
+split traffic based on different weights assigned to each IP address
+
+Heath checks can be created and configured with records in your hosted zones.
+
+### Latency based
+
+route traffic based on lowest network latency for your end user i.e. route to region that will give them the fastest response time
+
+Latency records are created for each IP address. Regions are automatically detected when IP addresses are entered.
+
+### Failover
+
+active and passive site setup. health checks are configured with the record set for the active site which help route to passive site incase the active's health goes down.
+
+### Geolocation
+
+routing of traffic based on geographical location of your user. Not to be confused with latency based, here we are restricting users to a site based on their geograhical location and not worrying about latency.
+
+### Geoproximity (Traffic flow only)
+
+routing based on geographical location of your user and your resources. 
+
+optionally choose to route more or kess to a given resource based on a bias value. 
+
+bias expands or shrinks the **size of the geographical location from which traffic is routed** to a resource. 
+
+must use Route 53 traffic flow
+
+### Multivalue Answer
+
+same as simple routing policy (one domain name returns multiple IP addresses) but associate health check with each record. this policy will then only return those records that are healthy.
+
+ # VPC
+
+Virtual private cloud let's you provision a loggically isloated section of AWS services. Select your own IP address range, create subnets, configure routing tables and network gateways.
+
+For example, configure web server instances on public subnets and DB instances on private subnet with no Internet access.
+
+Hardware VPC between corporate DC and your VPC. Leverage AWS cloud as extension of your corporate DC.
+
+Internet/Virtual Private gateway -> Router -> route table -> Network ACL -> Public/Private subnet (security group applied)
+
+Bastion subnet is when you connect to a public subnet to connect to a private subnet.
+
+CIDR blocks: 10.0.0.0/16 subnet is the largest allowed. 10.0.0.0/28 is the smallest.
+
+Bring up instances in subnet of your choice. Attach network Access Control Lists (ACLs) to control access to those subnets.
+
+Default VPC has subnets that connect to Internet.
+
+VPC peering uses private IP address to allow one VPC to connect to another via a direct network route. Uses star configuration (1 central with *n* others) not transitive.
+
+1 subnet = 1 AZ
+
+Security groups are stateful; Network ACL are stateless.
+
+## lab: build a custom VPC
+
+Networking > VPC
+
+**Create VPC**: name, IPv4 CIDR block, IPv6 CIDR, tenancy
+
+Above creates **route table**, **network ACL** and **security group** by default.
+
+**Create subnet**: name, VPC, AZ, IPv4 CIDR block, IPv6 CIDR block
+
+can create multiple subnets for each VPC
+
+5 IP addresses are reserved by Amazon (10.0.0.0-3, 10.0.0.255)
+
+**Modify auto-assign IP settings**
+
+**Create Internet Gateway**: name
+
+attach IG to VPC; allows only 1 IG to each VPC
+
+Best practice, keep main route table private.
+
+**Create route table**: name, VPC
+
+Edit routes and connect outbound IPv4(0.0.0.0/0) and IPv6(::/0) to required IG.
+
+Subnet association: connect subnet to required route table
+
+When creating Instance from AMI, select:
+
+- network IG
+- subnet
+- auto assign public IP address if needed (eg disable for DB instances)
+
+Security groups are limited to one VPC. Cannot be used in multiple VPCs.
+
+Create security group for private subnet such that it will accept requests from within our public subnet i.e. our application instances talking to our DB instance.
+
+create security group for private subnet: name, VPC, inbound rules {ICMP IPv4, public subnet}, {HTTP, public subnet}, {HTTPS, public subnet}, {SSH, public subnet}, {MySQL/Aurora, public subnet},
+allow all outbound rules
+
+Change security group of DB instance to this new security group.
+
+Copy private key of DB instance into App instance. Then ssh into app instance and then ssh into db instance. Alternative to this is to use bastion hosts.
+
+## lab: NAT instances and NAT Gateways
+
+Network Address Translation
+
+These instances allow private subnets to communicate to the Internet. Eg when you want to run yum to update/patch software within instances on a private subnet.
+
+NAT instance is a single EC2 instance. NAT gateways are multiple instances spread across multiple AZ with high availability.
+
+### NAT Instance
+
+NAT instance must be in a public subnet
+
+Should be a route out of the private subnet to the NAT instance.
+
+Bring up a NAT instance from the one available under Community AMIs. Bring it up under the same VPC. Disable source/destination check.
+
+Create a new Route such that destination is 0.0.0.0/0 (all outbound traffic on all port) and target is our NAT instance.
+
+Issues:
+
+- multiple EC2 instances using the same NAT instance can overwhelm it, can increase isntance size
+- can create HA by using autoscaling groups, multiple subnets in different AZs, and script to automate failover
+- behind security groups
+
+### NAT Gateway
+
+Create a new Gateway: subnet mention public subnet, create new elastic ip allocation ID
+
+Edit route table: edit main, destination is 0.0.0.0/0 (all outbound traffic on all port) and target is our NAT gateway
+
+NAT gateways cannot span AZs. Redundant inside the AZ.
+
+thruput is 5Gbps to 45Gbps
+
+no need to patch
+
+not associated with security groups
+
+automatically assigned IP addresses
+
+no need to disable source and destination checks
+
+When you have one NAT Gateway being used by instances in multiple AZs, then failure of that NAT gateway's AZ will block others. Better to bring up multiple NAT gateways in multiple AZs.
+
+
+
