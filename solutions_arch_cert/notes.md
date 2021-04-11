@@ -1539,5 +1539,249 @@ Operates over Internet, but customer gateway to AWS VPN CloudHub is encrypted (s
 - use private IP address over public IP address to save costs. this uses AWS backbone network.
 - to cut network costs, have all your EC2 instances in the same availability zone and use private IP address. 100% cost free but has **single point of failure issues**.
 
+# HA Architecture
+
+## Load Balancers Theory
+
+### application lb
+
+balancing HTTP and HTTPS traffic
+
+operate at level 7
+
+capable of advanced routing
+
+### network lb
+
+TCP traffic
+
+operates on level 4
+
+high permanence; millions of requests per second; ultra-low latencies
+
+### classic 
+
+balancing HTTP and HTTPS traffic
+
+can use Layer 7 specific features like X-Forwarded ans sticky sessions
+
+can use strict Layer 4 load balancing for TCP
+
+preferably use application LB but classic LB can be cheaper if you want simple round robin LB
+
+errors: 504 gateway timeout (application error)
+
+X-Forwarded-For Header: all traffic to applications reaches via the load balancer, which means it will log only the load balancer's IP for each request. Instead, it should use the X-Forwarded-For header which will retain the original sender's IP.
+
+## lab: Load Balancers and Health Checks
+
+### define classic load balancer
+
+load balancer name, VPC to create it inside
+
+listener configuration: protocol, port, instance protocol, instance port
+
+security group
+
+health check: ping protocol, port, path; response timeout, interval, unhealthy threshold, healthy threshold
+
+add EC2  instances, cross zone LB, connection draining
+
+### target groups
+
+Groups of EC2 instances where traffic will be routed to according to certain criteria.
+
+target group name; target type (instance, IP, lambda function); protocol; port; VPC; related health check 
+
+Add EC2 instances as targets to the target groups
+
+### define application load balancer
+
+name; scheme (internal facing, internal); IP address type
+
+listener: protocol
+
+AZs
+
+security group
+
+target group
+
+add EC2  instances to registered group of load balancer
+
+Rules can be created here with conditions and actions. This is not available in classic load balancers.
+
+
+
+504 means gateway has timed out, means the application is not responding to the gateway within the timeout configured on the gateway.
+
+`X-Forwarded-For` header can be used to see the original sender of the request.
+
+Instance statuses are `InService` or `OutofService`  
+
+Load balancers have their own DNS names and not IP address
+
+*Read ELB FAQ for Classic Load Balancers*
+
+## Advanced Load Balancer Theory
+
+### Sticky Sessions
+
+Normally Classic LB will route each request to the the instance with the smallest load. **Sticky sessions** will allow all requests from a user to be sent to the same EC2 instance for that session.
+In application load balancers, the traffic will be sent at the same target group and not individual instances.
+
+### Cross Zone Load balancing
+
+Imagine AZ One has 4 instances and AZ Two has 1 instance. Total of 5 instances.
+
+Route 53 will send 50% each to the each of these AZs which means AZ One will divide 50% of the received AZ load between 4 instances and AZ Two will divide 50% of received load between just 1 instance.
+
+Enabling Cross Zone Load Balancing will still make Route 53 divide the load 50% but the load balancers themselves will gang up cross AZ to divide up the load between the 5 instances. That is, load balancer in one AZ can redirect load to an instance in another AZ.
+
+You need not have a load balancer set up on an AZ Two to include instances there into the load balancer targets of AZ One's load balancer.
+
+### Path patterns
+
+Used to route traffic based on what is in the URL path. Useful for microservices. eg. general requests to one target group, image requests to another, etc.
+
+## Auto Scaling Theory
+
+**groups**: logical component i.e web server, application, database group
+
+**configuration templates**: launch template/configuration for EC2 instances in each group. specify information like AMI ID, instance type, key pair, security grouos, block device mapping.
+
+**scaling options**: ways to scale eg. on conditions or on schedule
+
+### scaling options
+
+#### maintain current instance levels at all times
+
+maintain a specified number of instances at all time. health check used to detect unhealthy instances, when detected terminate it and bring up a new one.
+
+#### scale manually
+
+manually specify the maximum, minimum, desired capacity of the auto scaling group
+
+#### scale based on schedule
+
+time and date, used when you know exactly when to increase or decrease the number of instances based on a predictable schedule
+
+#### scale based on demand
+
+sacling policies defined to control scaling process based on load
+
+#### Use predictive scaling
+
+Amazon EC2 scaling in combination with AWS Auto Scaling to use predictive (based of history of load) and dynamic (based on real time conditions) methods
+
+## lab: launch configurations and auto scaling groups
+
+### launch configuration
+
+create launch configuration, instance type
+
+name, IAM role, boot strap script, IP address type, Kernel ID, RAM disk ID
+
+storage
+
+security group
+
+### auto scaling group
+
+group name, launch configuration, group size, network (VPC), subnet
+
+load balancing, health check grace period
+
+keep group at initial size or use scaling policy
+
+scaling policy: min and max instances; name; metric type (average CPU utilization, etc); target value (of metric); warm up seconds for instance
+
+notification
+
+## HA Architecture
+
+Always design for failure
+
+use multiple AZs and regions wherever possible
+
+difference between multi-AZ (disaster recovery) and read replicas (performance) for RDS
+
+difference between scaling out (add ore instances) and scaling up (increases resources on existing instances)
+
+consider cost element
+
+S3 storage classes
+
+## lab: HA WordPress site
+
+S3 bucket: storage
+
+CloudFront: CDN
+
+Security Groups: which ports on which instances are open to which security groups
+
+RDS: database
+
+IAM Role: for EC2 to talk to S3
+
+EC2 instance: bootstrap scripts, etc.
+
+## lab: setting up EC2
+
+ssh into the EC2 instance to check if the bootstrap script has done its job
+
+WordPress wp config and database setup.
+
+S3 redundancy for uploaded images
+
+htaccess for url rewrite
+
+load balancer
+
+## lab: adding resilience and autoscaling
+
+cron job to update S3 with changes to EC2 storage. This can be done via the `aws s3 sync` command.
+
+auto scale launch config, auto scaling group
+
+## lab: cleaning up
+
+## Cloud Formation
+
+stack: template
+
+completely scripting your cloud environment
+
+Quick Start is a collection of CloudFormation templates already built by AWS Solution Architects
+
+## lab: Elastic Beanstalk
+
+Quickly deploy and manage applications in the AWS cloud without worrying about the infrastructure that runs those applications
+
+ELB automatically handles capacity provisioning, load balancing, scaling, and health monitoring.
+
+You just upload your application.
+
+## HA Bastions
+
+#### Option 1
+2 hosts in 2 separate AZs. Use Network Load Balancer with static IP addresses and health checks to fail over from one host to another. Network LB because layer 4, you can't use application load balancer here as it is layer 7.
+
+#### Option 2 
+
+1 host in 1 AZ behind an auto scaling group with health checks and a fixed Elastic IP address. If host fails, the auto scaling group will provision a new EC2 instance in a separate AZ. User data script can be used to configure the same Elastic IP address to the new host. Cheapest but not 100% fault tolerant.
+
+## On Premise Strategies
+
+**Database Migration Service**: AWS db exported out of AWS; heterogenous and homogenous migration
+
+**Server Migration Service**: incremental replication of on prem servers to AWS; backup, disaster recovery, etc.
+
+**AWS Application Discovery Service**: install on prem and generate a server utilization and dependency map of your on prem environment; can be used toestimate the total cost of ownership of runnign on AWS; data available on AWS Migration Hub 
+
+**VM Import/Export**: migrate existing applications into EC2 or export your AWS VMs to on-prem; 
+
+**Download Amazon Linux 2 as an ISO**
+
 
 
