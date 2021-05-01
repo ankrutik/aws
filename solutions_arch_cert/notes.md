@@ -1783,5 +1783,230 @@ You just upload your application.
 
 **Download Amazon Linux 2 as an ISO**
 
+# Applications
+
+## SQS
+
+This is a distributed queue system that allows web service applications to *queue messages* that *one component in the application generates to be consumed by another component*.
+
+**Pull based**, not push based.
+
+"**Decouple**" components of an application to run independently.
+
+### Messages
+
+- Messages can contain **up to 256 KB of text**.  Any messages going above this limit will be stored in S3 with limit of 2GB.
+- retention period in queue from 1 minute to 14 days; default is 4 days
+- Can be retrieved programatically using the **Amazon SQS API**
+  - **short polling** retrieves messages immediately even if queue is empty
+  - **long polling** does not return till a message arrives or the long poll times out
+  - *long polling should be used to avoid constant short polling on an empty queue which leads to unnecessary cost*
+
+### Queue
+
+A **queue** is a temporary repository for messages that are waiting to be processed.
+
+- acts as a buffer between producer and consumer
+- useful when producer is creating work faster than consumer can process
+- useful when the producer or consumer are intermittently connected to the network
+- helps to store messages even an EC2 goes down. Another instances can simply pick the message up instead of the message getting lost due to the failing EC2 instance.
+
+#### Standard Queue
+
+- default queue type
+- nearly unlimited number of transactions per second
+- guaranteed to deliver message at least once
+- more than one copy of the message may  be delivered 
+- messages may be received out of order
+
+#### FIFO Queue
+
+- messages' order is strictly preserved
+- once delivered, a message will stay there till a consumer processes and deletes it
+- duplicates are not introduced
+- allows multiple ordered message groups within a single queue
+- limited to 300 transactions per second
+
+#### Visibility Timeout
+
+- amount of time that a message is invisible in a queue after a reader has picked it up
+- If reader processes it before the timeout, the message will be deleted
+- If reader does not process it before timeout, the message will become visible again which may be picked up by another reader
+- common cause of same message being delivered twice; increase the visibility timeout
+- maximum of 12 hours
+
+
+
+## Simple Work Flow Service (SWF)
+
+- cordinate work across distributed application components
+- tasks/work can be executable code, web service calls, **human actions**, scripts
+- used for manual or human tasks involved in a workflow
+- collection of related workflows are refered to as a **domain**
+
+### SWF vs SQS
+
+| topic            | SWF     | SQS   |
+| ---------------- | ------- | ------ |
+| **retention period** | 14 days | 1 year |
+|**duplicate messages possible?**|no|yes, application needs to handle|
+|**tracking**|yes, tracks all tasks and events|no, need to implement your own application-level tracking |
+
+### SWF Actors
+
+**Workflow starters**: application that initiates a workflow
+
+**Deciders**: control flow of activity tasks; if something has finished/failed, this will decide what to do next
+
+**Activity Workers**: carry out the activity tasks
+
+## Simple Notification Service
+
+- setup, operate, send notifications from cloud
+- publish messages from application and immediately deliver to subscribers or other applications
+- Messages stored redundantly across multiple AZs.
+
+### Destination types
+
+- Apple, Google, Fire OS, Windows devices
+- Android devices in China with Baidu Cloud Push
+- SMS
+- email to SQS
+- any HTTO endpoint
+
+### **Topic**
+
+- access point allowing receipients to subscribers to dynamically subscribe for identical copies of same notification
+- Multiple endpoints eg. group together android, iOS, SMS
+- application can pulbish to a topic, SNS will then send out the notification
+
+### Benefits
+
+- instantaneuos push, no polling
+- simple API
+- multiple transport protocols
+- pay as you go; no up front cost
+- AWS Management Console offers point-and-click interface
+
+## Elastic Transcoder
+
+- media transcoder in the cloud ie convert media files to different formats to play on smartphones, tablets, PCs, etc
+- provides popular presets for popular output formats supports on various devices
+- pay for minutes and resolution
+
+## API Gateway
+
+- fully managed service for developers to publish, maintain, monitor, and secure APIs at scale
+- expose HTTPS end points to define RESTful API
+- "serverless" connection to Lambda and DynamoDB
+- send each API endpoint to different target
+- low cost; scale effortlessly
+- track and control usage by API key
+- throttle requests to prevent attacks that will impact cost
+- connect to CloudWatch to log all requests for monitoring
+- maintain multiple versions of API
+
+### Configuration
+
+- define API (container)
+- definte resources and nested resources (URL)
+- for each resource:
+  - supported HTTP methods (verb)
+  - security
+  - target (EC2, Lambda, DynamoDB, etc.)
+  - request and response transformations
+
+### Deploy
+
+- uses API Gateway domain
+- can use custom domain
+- supports AWS Certificate Manager (free SSL/TLS certs)
+- deployed to a stage
+
+### Caching
+
+- reduce number of calls made to your endpoints
+- improve latency of requests
+- TTL period can be defined in seconds
+
+### Origin Policy
+
+To prevent Cross-Site Scripting attacks (XSS), same origin policy is enforced by browsers where in scripts from one page can access data from another page only if the web pages have the same origin.
+
+But AWS uses different domain names for different services.
+
+CORS (Cross-origin resource sharing) allows restricted resources on a web page to be requested from another domain than from which the web page was served. This is implemented at the server side and not in the client browser code.
+
+#### CORS Flow
+
+- browser makes HTTP OPTIONS call for a URL
+- server responds with the list of domains allowed to call the URL
+- If you get error "Origin policy cannot be read at the remote resource", then enable CORS on API gateway.
+
+***TODO How is this different than CloudFront CDN?***
+
+## Kenesis
+
+**Streaming Data** is data that is 
+
+- generated continuously by 1000s of data sources
+- sent simultanously as data records
+- sent in small sizes (kilobytes)
+
+Examples purchases from online stores, stock prices, game data, social network data, geospatial data, iOT data.
+
+**Amazon Kenesis**
+
+- platform to send streaming data to
+- load, analyse streaming data
+- build custom applications
+
+### Kenesis Streams
+
+Different producers can stream data to Kenesis Streams.
+
+Streams from each of these producers can be stored in separate Shards. Retention from 24 hours to 7 days.
+
+Consumer applications will read from these shards.
+
+#### Shards
+
+- read: 5 transactions per second; upto max total read rate of 2MB per second
+- write: 1000 records per second; upto max total write rate of 1MB per second (including partition keys)
+- total capacity of the stream is the sum of the capacities of shards
+
+### Kenesis Firehose
+
+No persistence (storage), needs to be processed immediately.
+
+### Kenesis Analytics
+
+Works with both Streams and Firehose.
+
+Analyze data on the fly and save it at endpoints like S3, Redshift, Elasticsearch Cluster.
+
+## Cognito (Web Identity Federation)
+
+**Web Identity Federation** lets user get access to AWS resources by authenticating with a web-based identity provider like Google, Facebook, Amazon.
+
+User receives a temporary AWS security credentials.
+
+**Cognito** is the WIF service by Amazon.
+
+Allows
+
+- sign up and sign in to apps
+- access to guest users
+- sync user data for multiple devices
+- recommended for all AWS mobile apps
+
+Cognito **User Pools** are user directories used to manage sign-up and sign-in functionality for mobile and web applications. Successful auth generates a **JSON Web token** (JWT). *Deals with user names, passwords, registrations, account recovery, initial authentication.*
+
+Cognito **Identity Pools** provide temporary AWS credentials to access AWS services like S3 or DynamoDB. *Deals with actual granting of IAM role as part of the authentication.*
+
+Cognito tracks association between user identity and the various devices that the user has signed in from. Cognito will use **Push Synchronization to push updates and sync a user across multiple devices**. Uses **SNS** to send notification to devices whenever data stored on cloud has changed.
+
+
+
 
 
