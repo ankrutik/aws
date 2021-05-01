@@ -2006,6 +2006,116 @@ Cognito **Identity Pools** provide temporary AWS credentials to access AWS servi
 
 Cognito tracks association between user identity and the various devices that the user has signed in from. Cognito will use **Push Synchronization to push updates and sync a user across multiple devices**. Uses **SNS** to send notification to devices whenever data stored on cloud has changed.
 
+# Security
+
+## Reducing Security Threats
+
+Bad actors: 
+
+- typically automated processes
+- content scrapers
+- bad bots
+- fake user agent
+- Denial of Service
+
+By blocking these, we lower overall costs by eliminating access and also reduce security threats.
+
+NACL (Network Access Control List):
+
+- NACL rules can be used to block IPs in outbound or inbound manner.
+- works at layer 4 (Transport layer)
+
+Host based firewall: 
+
+- Linux: firewalld, iptables, uff
+- Windows Firewall
+
+Application Load Balancer (ALB):
+
+- The connection from the bad actor will terminate at the ALB and not at the EC2 instance. So host based firewalls are ineffective.
+
+- The ALB security group (public subnet) can be configured to be the only one that can access the EC2 Security Group (private subnet).
+
+Network Load Balancer (NLB):
+
+- traffic passes thru and thru the NLB to the EC2 instance, so NACL should be used.
+
+Web Application Firewall (WAF):
+
+- attached to load balancer or CloudFront
+- monitor web requests and block/allow according to conditions
+- preconfigured filtering to block common attacks like cross site scripting or SQL injection
+- works at layer 7 (application layer), so you can inspect content of the traffic
+- if you want to block IP or range of IPs, NACL should be used
+- when using CloudFront:
+  - the CloudFront IP is passed on the NACL, so origin IP will not be visible. In this case, use WAF with CloudFront.
+  - CloudFront's Geo Match feature can be used to block IPs geographically
+
+## Key Management Service (KMS)
+
+- manage keys for encryption and decryption
+- manage **customer master keys (CMK)** which are logical representation of key or pointer to cyrptographic material
+- regional; CMKs do not leave the report or KMS
+- ideal for S3 objects, database password, API keys that stored in Systems Manager Parameter store
+- encrypt/decrypt data upto 4KB in size
+- integrated with most AWS services
+- pay per API call like listing keys, encrypt, decrypt, reencrypt
+- audit via CloudTail; logs on S3
+- uses FIPS 140-2 Level 2, requires to show evidence of tampering. (Level 3 CloudHSM)
+
+### Types of CMKs
+
+AWS Managed CMK: free; used by default if encryption is enabled in any AWS service; only the service can use them; can track usage; lifecycle and permissions are managed by KMS
+
+Customer Manager CMK: specific to and created by customer; full control over lifecycle of key via key policies which can be enabled or disabled; allows key rotation
+
+AWS Owned CMK: owned by AWS service and used on shared basis across multiple accounts; you can't view/track/audit them
+
+### Symmetric vs Asymmetric CMKs
+
+| Criterion                         | Symmetric                                                    | Asymmetric                                                   |
+| --------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| how many keys?                    | default, same key for encryption/decryption                  | public and private key pair                                  |
+| Algorithm?                        | AES-256                                                      | RSA and ECC                                                  |
+| Never leaves AWS unencrypted?     | yes                                                          | only private key                                             |
+| Must call KMS APIs to use?        | yes                                                          | only private key                                             |
+| KMS integrated with AWS services? | yes                                                          | Not supported. Public key can be downloaded and used outside AWS. Used by those who can't call KMS API. |
+| Usage?                            | encrypt, decrypt, reencrypt                                  | sign messages, verify signatures                             |
+| Misc.                             | Generate data keys, data key pairs, and random byte strings. Import your own key material. | --                                                           |
+
+### Key Policies
+
+A default key policy is created when a CMK is created via API. This policy grants full access to the keys to the AWS account (root user).
+
+When encrypted objects move between region, the object needs to be decrypted first, then moved and encrypted in the other region with a CMK there.
+
+Key alias is a shortcut to point to multiple keys; help with key rotation as any key within that alias will be used. All alias need to be prefixed with `alias/`
+
+Cipher text blob is Base 64 encoded.
+
+ciphertext -> base 64 decode -> decrypt -> base64 decode
+
+Data Encryption Key (DEK) used for encrypting files more than 4KB. When you created one you get the plain text key and cipher text blob of the key which contains metadata. Throw the plain text, store cipher text blob with your encrypted file. the decrypting process wil use the cipher text blob when calling the KMS API to fetch the Data Key and decrypt locally. This avoids unnecessary latency that could have resulted out of sending the entire file over to KMS to decrypt and return.
+
+## CloudHSM
+
+- Dedicated "Hardware Secure Modules"
+
+- FIPS 140-2 Level 3, physical security mechanisms
+- manage your keys
+- single tenant, multi-AZ cluster dedicated to one customer
+- no accedd to AWS managed component
+- runs within VPC
+- industry standard APIs (PKCS#11, Java Cryptography Extensions - JCE, Microsoft CryptoNG - CNG); no AWS APIs
+- keys irretrievable if lost
+- operates within its own VPC. Each HSM will project Elastic Network Interfaces into a VPC where your application sits in, your application can then communicate via that ENI. 
+- Not highly available, need to configure one per AZ with its opwn subnet.
+- Have at least 2 so that when one HSM fails, the ENI of the other HSM can be accessed.
+
+## Systems Manager Parameter Store
+
+
+
 
 
 
