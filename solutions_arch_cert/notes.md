@@ -2114,9 +2114,252 @@ Data Encryption Key (DEK) used for encrypting files more than 4KB. When you crea
 
 ## Systems Manager Parameter Store
 
+- AWS Systems manager (SSM)
 
+- Used to securely store secret keys, passwords, connections strings, configurations, license codes, API keys, etc. instead of maintaining the same in code base.
+- serverless storage
+- encrypted (KMS) or plaintext
+- store in hierarchies; can be addressed via URL; max 15 level deep
+- track versions
+- TTL expiry for configurations like passwords
 
+### lab:
 
+- created policy to give access to certain API like `GetParameter`
+- create role and assigned policy to it
+- create simple lambda that will
+  - read ceratin environment variables
+  - use those env vars to create a URL
+  - URL will be used to read parameters at that parameter store path
+- create a key in KMS
+  - create an admin of that key
+  - give the previously created role access on that key
+- create parameter in parameter store
+  - name as the URL; standard tier since values less that 4KB; specify KMS
+  - paramter can be String;  Secure String; String List
+- configure test event for lambda to test
 
+# Serverless
 
+## Lambdas
+
+Data Centre -> IAAS -> PAAS -> Containers -> Serverless
+
+AWS Lambdas is a compute service where you can upload just your code in the form of Lambda functions. AWS Lambdas takes care of provisioning and managing the servers that are used to run the code.
+
+Lambdas can trigger other lambdas.
+
+Lambdas scale out, not up. Means a new function instance is started instead of upgrading resource of existing function.
+
+Independent, 1 event = 1 function.
+
+API gateway can trigger lambdas.
+
+Languages:
+
+Node.js, Java, Python, C#, Go, PowerShell 
+
+Not serverless: All RDS except for AuroraDB; EC2
+
+AWS X-ray allows you to debug Lambdas among other microservice and serverless architectures.
+
+Can perform global tasks.
+
+***TODO list what are not serverless; triggers***
+
+### Used as
+
+- event driven: runs code in response to events like changes to S3 bucket or DynamoDB table
+- compute service: runs code in response to HTTP requests made to amazon API Gateway or AWS SDKs
+
+### Pricing
+
+**number of requests**: first 1 million requests are free. 0.20 $ per 1 millions requests thereafter
+
+**duration**: calculated from time code begins execution till it returns or terminates, rounded to 100ms. $0.00001667 for every GB-second used (memory allocated by function)
+
+## lab: Build Serverless Webpage
+
+### Lambdas homepage
+
+**options**: author from scratch; blueprints; AWS serverless app repo
+
+Select "author from scratch"
+
+Name; Runtime (language); Role; Role name; Policy Templates
+
+### Designer
+
+Trigger: {API; Security}
+
+Function code
+
+Environment variables
+
+Tags
+
+Execution Role; Basic Settings {memory, timeout}; Network {VPC}; Debugging {DLQ}; Concurrency; Auditing and Compliance
+
+### API
+
+Amazon API gateway
+
+Actions: create method (create a GET request and configure it to hit the lambda function)
+
+Actions: Deploy API 
+
+Click on the newly created GET method, invoke URL
+
+Make a S3 bucket; make it public; static web site hosting; upload index.html and error.html; make them public; index.html has a button that hits the above created lambda
+
+## lab: Build an Alexa Skill
+
+*Too complex for notes*
+
+https://www.udemy.com/course/aws-certified-solutions-architect-associate/learn/lecture/13888042#content
+
+Create a s3 bucket for AWS Polly to write out to. 
+
+Create a AWS Polly synthesis task to create mp3 file out of some notes.
+
+Create a Alexa skill to read out random facts. Use the audio src tag to point to the above mp3 files in s3 bucket.
+
+## Serverless Application Model (SAM)
+
+CloudFormation extension optimised for serverless applications.
+
+New type: functions, APIs, tables
+
+Supports anything that CloudFormation supports
+
+run serverless applications locally
+
+package and deploy using CodeDeploy
+
+### SAM Template
+
+yaml file with:
+
+1. headers like `transform`: tells CloudFormation that this is a SAM template
+2. `Globals` that help specify properties to all functions
+3. `Resources`: creates lambda function from local code; create API gateway endpoint, mappings, permissions
+4. `Outputs`: specify ARNs for lambda functions configured above
+
+### CLI
+
+`sam init`: interview style cli to initialize SAM template. creates directory with a SAM template file.
+
+`sam build`
+
+`sam deploy --guided`: stack name; AWS region; IAM role; authorization to acces lambda; save these reply arguments to .toml file for next run
+
+The resulting configurations can be viewed in management console.
+
+## Elastic Container Service (ECS)
+
+container: package that contains application; and the  libraries, runtime, tools required to run it
+
+containers run on an engine like Docker
+
+isolation benefits of virtualization with less overhead and faster starts than VMs
+
+portable and offer a consistent environment
+
+### What is ECS?
+
+- managed container orchestration service
+- create clusters to manage fleets of container deployments
+- manages EC2 or Fargate instances
+- schedules optimum placement of containers
+- define rules for CPU and memory requirements
+- monitors resource utilization
+- deploy, update, roll back 
+- integration with VPC, security groups, EBS volumes, ELB
+- CloudTrail and CloudWatch
+
+### Terminology
+
+Cluster: logical collection of ECS resources (ECS EC2 or Fargate instances)
+
+Task Definition: defines your application for running containers in ECS; can contain multiple containers
+
+Container definition: individual container that a *task* uses; controls CPU, memory allocations, port mappings
+
+Task: single running copy of any containers defined by a *task definition*
+
+Service: allows *task definitions* to be scaled by adding new *tasks*; define max and min values 
+
+Registry: storage for container images, used to download images to create containers
+
+```
+Cluster { 
+	Service { 
+		Task Definition { 
+			Container Definition 
+		} 
+	} 
+}
+```
+
+### Fargate
+
+- serverless container engine
+- eliminates need to provision and manager servers
+- specify and pay for resources per application
+- works with ECS and EKS
+- each workload runs in its own kernel
+- isolation and security
+- choose ec2 instead if:
+  - compliance requirements
+  - require broader customization
+  - require GPUs
+
+### EKS
+
+- Elastic Kubernetes Service
+- K8s is open-source and lets you deploy and manager containerized applications at scale
+- containers grouped into pods (tasks in ECS)
+- supports EC2 and Fargate
+- use EKS when:
+  - already using K8s
+  - want to migrate K8s setup to AWS
+
+### ECR
+
+- managed Docker container registry
+- store, manage, deploy images
+- integrates with ECS and EKS
+- works on on-prem deployments
+- highly available
+- intergrated with IAM
+- pay for storage and data transfer
+
+### ECS + ELB
+
+- distribute traffic evenly across tasks in service
+- supports ALB, NLB, CLB
+- use ALB to route HTTP/HTTPS (layer 7) traffic
+- use NLB or CLB to route TCP (layer 4) traffic
+- supported by both EC2 and Fargate launch types
+- ALB allows:
+  - dynamic host port mapping
+  - path-based routing
+  - priority rules
+- ALB is recommended over NLB or CLB
+
+### ECS Security
+
+EC2 Instance Roles: Policies applied to all tasks in that EC2 instance
+
+Task Roles: applies policy per task
+
+### lab:
+
+Container definition (image for container); task definition
+
+Define service (service name, number of tasks, security group, load balancer type)
+
+Cluster (cluster name, VPC ID, Subnets)
+
+Review
 
